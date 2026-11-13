@@ -92,6 +92,21 @@ export function orderReducer(state: AppState, action: AppAction): AppState {
       return { ...initialState, lastMessage: i18next.t('message.reset') }
     case 'SET_MESSAGE':
       return { ...state, lastMessage: action.message }
+    case 'SET_MEMBERS':
+      // 协同：同桌成员变化时同步「谁点了」候选列表；空列表保持既有演示成员
+      return action.diners.length ? { ...state, diners: action.diners } : state
+    case 'ACK_CART_ITEM':
+      return { ...state, cart: state.cart.map((item) => item.uid === action.uid ? { ...item, ack: action.ack } : item) }
+    case 'HYDRATE_SHARED':
+      // 协同：以服务端快照整表替换共享购物车/订单/阶段，收敛各端最终一致
+      return {
+        ...state,
+        cart: action.cart,
+        orderItems: action.orderItems,
+        orderStage: action.orderStage,
+        paid: action.paid,
+        diners: action.members?.length ? action.members.map((member) => member.nickname) : state.diners,
+      }
     default:
       return state
   }

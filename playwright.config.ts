@@ -11,7 +11,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
-  reporter: [['html', { open: 'never' }], ['list']],
+  // html/list 为既有报告；sharedSessionReset 为联调环境隔离（每条用例前重置同桌共享会话，见该文件注释）。
+  reporter: [['html', { open: 'never' }], ['list'], ['./e2e/reporters/sharedSessionReset.ts']],
   timeout: 30000,
   expect: { timeout: 10000 },
   use: {
@@ -28,7 +29,8 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    command: `npm run dev -- --port ${PORT} --strictPort`,
+    // 同时拉起 Vite 与协同服务（协同服务不可用时前端降级，见 scripts/dev-all.mjs）
+    command: 'node scripts/dev-all.mjs',
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

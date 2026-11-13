@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronRight, MapPin, QrCode, Sparkles, Users } from 'lucide-react'
+import { Check, ChevronRight, ClipboardCheck, MapPin, QrCode, Sparkles, Users } from 'lucide-react'
 import hotpot from '@/assets/hotpot.jpg'
 import { Button } from '@/components/ui/button'
+import { tableAreas } from '@/data/menu'
 
 const tableOptions = [
   { code: 'A08', areaKey: 'bind.area.hall', seats: 4 },
@@ -10,10 +12,27 @@ const tableOptions = [
   { code: 'D03', areaKey: 'bind.area.window', seats: 6 },
 ]
 
-interface HomeViewProps { onBind: (table: string) => void }
+interface HomeViewProps {
+  onBind: (table: string) => void
+  onShowcase: () => void
+}
 
-export function HomeView({ onBind }: HomeViewProps) {
+export function HomeView({ onBind, onShowcase }: HomeViewProps) {
   const { t } = useTranslation()
+  const [code, setCode] = useState('')
+  const [codeError, setCodeError] = useState('')
+
+  // 桌台码白名单校验（REQ-001.1 / REQ-001.3）：非法时原地提示并保留已输入内容
+  const submitTableCode = () => {
+    const value = code.trim().toUpperCase()
+    if (!tableAreas[value]) {
+      setCodeError(t('bind.table_code_invalid'))
+      return
+    }
+    setCodeError('')
+    onBind(value)
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-rice-100 paper-noise">
       <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-chili-100 blur-3xl" />
@@ -59,6 +78,27 @@ export function HomeView({ onBind }: HomeViewProps) {
             ))}
           </div>
           <Button onClick={() => onBind('A08')} className="mt-4 w-full"><MapPin size={17} />{t('bind.quick_enter')}</Button>
+
+          <form
+            className="mt-4 rounded-2xl bg-rice-100 p-4"
+            onSubmit={(event) => { event.preventDefault(); submitTableCode() }}
+          >
+            <label htmlFor="table-code-input" className="text-xs font-bold text-charcoal-700">{t('bind.table_code_label')}</label>
+            <div className="mt-2 flex gap-2">
+              <input
+                id="table-code-input"
+                value={code}
+                onChange={(event) => { setCode(event.target.value); if (codeError) setCodeError('') }}
+                placeholder={t('bind.table_code_placeholder')}
+                autoComplete="off"
+                className="h-11 min-w-0 flex-1 rounded-xl border border-charcoal-900/10 bg-white px-4 text-sm uppercase outline-none transition focus:border-chili-500/30 focus:ring-4 focus:ring-chili-50"
+              />
+              <Button type="submit" variant="secondary">{t('bind.table_code_submit')}</Button>
+            </div>
+            {codeError && <p role="alert" className="mt-2 text-xs font-semibold text-chili-600">{codeError}</p>}
+          </form>
+
+          <Button variant="outline" onClick={onShowcase} className="mt-3 w-full"><ClipboardCheck size={17} />{t('common.showcase_entry')}</Button>
         </section>
       </div>
     </main>
