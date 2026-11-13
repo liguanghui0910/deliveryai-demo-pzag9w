@@ -35,8 +35,12 @@ export function parseNickname(raw: unknown): string {
   if (length < 1 || length > MAX_NICKNAME_LENGTH) {
     throw new ApiError('INVALID_NICKNAME', `昵称长度必须为 1-${MAX_NICKNAME_LENGTH} 个字符`)
   }
-  // 禁止换行与控制字符（含 \u0000-\u001f、\u007f）。
-  if (/[\u0000-\u001f\u007f]/.test(nickname)) {
+  // 禁止换行与控制字符（含 U+0000-U+001F、U+007F）；用码点判断，避免正则字面量控制字符。
+  const hasControlChar = [...nickname].some((char) => {
+    const code = char.codePointAt(0) ?? 0
+    return code <= 0x1f || code === 0x7f
+  })
+  if (hasControlChar) {
     throw new ApiError('INVALID_NICKNAME', '昵称不能包含换行或控制字符')
   }
   return nickname

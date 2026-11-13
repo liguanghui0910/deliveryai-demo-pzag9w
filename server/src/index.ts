@@ -75,6 +75,7 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json(toErrorBody('NOT_FOUND', '资源不存在'))
 })
 
+// Express 依赖 4 参数签名识别错误处理中间件，故保留第 4 个参数（以 _ 前缀命名，见 eslint 约定）。
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const status = Number((error as { status?: number })?.status ?? 500)
   if (status >= 400 && status < 500) {
