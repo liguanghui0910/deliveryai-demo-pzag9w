@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Check, Flame, Plus, Search, Sparkles, Users } from 'lucide-react'
 import { categories, products } from '@/data/menu'
@@ -10,10 +10,12 @@ import type { CartItem, Product } from '@/types'
 interface MenuViewProps {
   diners: string[]
   soldOut: string[]
+  /** 本端成员昵称；协同可用时「谁点了」默认选中本人。 */
+  selfName?: string
   onAdd: (item: CartItem) => void
 }
 
-export function MenuView({ diners, soldOut, onAdd }: MenuViewProps) {
+export function MenuView({ diners, soldOut, selfName, onAdd }: MenuViewProps) {
   const { t } = useTranslation()
   const [category, setCategory] = useState('menu.cat.recommend')
   const [search, setSearch] = useState('')
@@ -22,7 +24,14 @@ export function MenuView({ diners, soldOut, onAdd }: MenuViewProps) {
   const [flavor, setFlavor] = useState('')
   const [spicy, setSpicy] = useState('menu.option.mild')
   const [showRiskWarning, setShowRiskWarning] = useState(false)
-  const [diner, setDiner] = useState(diners[0])
+  const defaultDiner = () => (selfName && diners.includes(selfName) ? selfName : diners[0] ?? selfName ?? '')
+  const [diner, setDiner] = useState(defaultDiner)
+
+  // 同桌成员变化（协同加入/离开）时，保持「谁点了」选中项有效并优先落在本人
+  useEffect(() => {
+    if (diners.includes(diner)) return
+    setDiner(selfName && diners.includes(selfName) ? selfName : diners[0] ?? selfName ?? '')
+  }, [diners, selfName, diner])
 
   const handleSpicyChange = (option: string) => {
     if (option === 'menu.option.super_spicy') {

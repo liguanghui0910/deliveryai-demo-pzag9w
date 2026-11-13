@@ -5,4 +5,8 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   resolve: { alias: { '@': new URL('./src', import.meta.url).pathname } },
+  server: {
+    // 开发态把协同接口代理到本地协同服务；同源部署（veFaaS 单服务）时无需代理
+    proxy: { '/api': 'http://localhost:3001' },
+  },
 })

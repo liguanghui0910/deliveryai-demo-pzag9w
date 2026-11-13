@@ -1,18 +1,38 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, MapPin, Sparkles, Store } from 'lucide-react'
+import { ArrowRight, MapPin, Sparkles, Store, UserRound } from 'lucide-react'
 import hotpot from '@/assets/hotpot.jpg'
 import { Button } from '@/components/ui/button'
 import { tableAreas } from '@/data/menu'
 
 interface WelcomeViewProps {
   table: string
-  onEnter: () => void
+  /** 预填昵称（沿用本端身份或默认昵称），保证既有「直接进入点餐」路径可用。 */
+  defaultNickname: string
+  onEnter: (nickname: string) => void
 }
 
-export function WelcomeView({ table, onEnter }: WelcomeViewProps) {
+export function WelcomeView({ table, defaultNickname, onEnter }: WelcomeViewProps) {
   const { t } = useTranslation()
   const areaKey = tableAreas[table]
   const tableLabel = areaKey ? `${table} · ${t(areaKey)}` : table
+  const [nickname, setNickname] = useState(defaultNickname)
+  const [error, setError] = useState('')
+
+  // 昵称本地校验（REQ-001.3）：空/仅空白或超长时阻止加入、保留已输入内容并给出可纠正提示
+  const submit = () => {
+    const value = nickname.trim()
+    if (!value) {
+      setError(t('welcome.nickname_required'))
+      return
+    }
+    if (value.length > 12) {
+      setError(t('welcome.nickname_too_long'))
+      return
+    }
+    setError('')
+    onEnter(value)
+  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-rice-100 paper-noise">
@@ -51,9 +71,23 @@ export function WelcomeView({ table, onEnter }: WelcomeViewProps) {
             </p>
           </div>
 
-          {/* 进入点餐按钮 */}
+          {/* 昵称与进入点餐 */}
           <div className="px-6 pb-7">
-            <Button onClick={onEnter} className="w-full">
+            <label htmlFor="nickname-input" className="flex items-center gap-2 text-sm font-bold text-charcoal-900">
+              <UserRound size={16} className="text-chili-500" />
+              {t('welcome.nickname_label')}
+            </label>
+            <input
+              id="nickname-input"
+              value={nickname}
+              onChange={(event) => { setNickname(event.target.value); if (error) setError('') }}
+              placeholder={t('welcome.nickname_placeholder')}
+              autoComplete="off"
+              className="mt-2 h-11 w-full rounded-xl border border-charcoal-900/10 bg-white px-4 text-sm outline-none transition focus:border-chili-500/30 focus:ring-4 focus:ring-chili-50"
+            />
+            <p className="mt-2 text-xs text-charcoal-500">{t('welcome.nickname_hint')}</p>
+            {error && <p role="alert" className="mt-2 text-xs font-semibold text-chili-600">{error}</p>}
+            <Button onClick={submit} className="mt-4 w-full">
               {t('welcome.enter')}
               <ArrowRight size={17} />
             </Button>

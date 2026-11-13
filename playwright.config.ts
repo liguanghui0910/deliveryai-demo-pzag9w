@@ -28,7 +28,8 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    command: `npm run dev -- --port ${PORT} --strictPort`,
+    // 同时拉起 Vite 与协同服务（协同服务不可用时前端降级，见 scripts/dev-all.mjs）
+    command: 'node scripts/dev-all.mjs',
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 30000,
