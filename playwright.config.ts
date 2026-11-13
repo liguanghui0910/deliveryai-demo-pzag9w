@@ -11,7 +11,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
-  reporter: [['html', { open: 'never' }], ['list']],
+  // html/list 为既有报告；sharedSessionReset 为联调环境隔离（每条用例前重置同桌共享会话，见该文件注释）。
+  reporter: [['html', { open: 'never' }], ['list'], ['./e2e/reporters/sharedSessionReset.ts']],
   timeout: 30000,
   expect: { timeout: 10000 },
   use: {

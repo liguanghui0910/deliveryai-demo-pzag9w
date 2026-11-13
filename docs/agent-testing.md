@@ -6,7 +6,7 @@
 
 - 缺 `node_modules` 时先装依赖（`npm ci` / `npm install`），再编译或类型检查。
 - 直接使用 `playwright.config.ts` 的默认配置，不在命令行传 `--reporter`、`--viewport` 等覆盖参数，一次执行同时拿到终端输出和 HTML 报告。既定默认值：
-  - reporter：`html`（输出到默认 `playwright-report/`）+ `list`。
+  - reporter：`html`（输出到默认 `playwright-report/`）+ `list` + `./e2e/reporters/sharedSessionReset.ts`（联调环境隔离：对既有回归门禁 spec 的每条用例，先调用演示重置接口清空同桌共享会话，恢复「进入桌台即全新状态」这一既有前提；协同用例不受影响，后端不可用时静默跳过）。
   - 视口 Desktop Chrome 1280x720；`timeout` 30s、`expect.timeout` 10s。
   - 浏览器：`PLAYWRIGHT_CHROMIUM_PATH` 指向的可执行文件，否则回退 `/opt/chromium.org/chromium/chrome`。
   - `webServer` 自动执行 `npm run dev` 并探测 `http://localhost:5173`，本地已在跑时复用。
