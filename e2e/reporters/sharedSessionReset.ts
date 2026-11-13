@@ -16,6 +16,9 @@ import type { Reporter, TestCase } from '@playwright/test/reporter'
  * 部分文件依赖同文件内用例按声明顺序的连续性，本 reporter 不介入。
  *
  * 后端不可用（降级环境）时全部请求静默失败，不影响用例执行（REQ-008.5）。
+ *
+ * 该处置方式已由需求方在联调部署节点确认（2026-11-13）：「测试环境侧隔离」，
+ * 不做产品侧语义改动；若后续改为产品侧会话回收，需先修订上游 Spec。
  */
 
 /** 桌台白名单，与 `src/data/menu.ts` / `server/src/types.ts` 保持一致。 */
