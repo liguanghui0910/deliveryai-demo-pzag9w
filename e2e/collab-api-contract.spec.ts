@@ -22,6 +22,11 @@ interface SessionSnapshot {
 const TABLE = 'C06'
 const base = (table: string) => `/api/v1/tables/${table}`
 
+// 服务端为进程内存态且按 uid / Idempotency-Key 幂等，故每次执行使用唯一标识，保证用例可重复执行。
+const RUN = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+const uidOf = (label: string) => `e2e-${label}-${RUN}`
+const ITEM_UID = uidOf('item')
+
 async function joinMember(request: APIRequestContext, nickname: string, clientMemberId: string) {
   const res = await request.post(`${base(TABLE)}/members`, { data: { nickname, clientMemberId } })
   await expectOk(res)
@@ -84,7 +89,7 @@ test.describe('同桌协同 - 接口契约与幂等（REQ-001/002/003/005/006）
   test('REQ-002.2: 同一 uid 重复加菜保持幂等，不重复计数', async ({ request }) => {
     const { member } = await joinMember(request, '契约成员A', 'e2e-contract-a')
     const item = {
-      uid: 'e2e-uid-idempotent-1',
+      uid: ITEM_UID,
       productId: 'p9',
       name: '手工宽粉',
       price: 16,
@@ -108,7 +113,7 @@ test.describe('同桌协同 - 接口契约与幂等（REQ-001/002/003/005/006）
     const invalidQuantity = await request.post(`${base(TABLE)}/cart/items`, {
       data: {
         memberId: member.memberId,
-        item: { uid: 'e2e-uid-bad-qty', productId: 'p9', name: '手工宽粉', price: 16, quantity: 21, image: '', spec: '整份' },
+        item: { uid: uidOf('bad-qty'), productId: 'p9', name: '手工宽粉', price: 16, quantity: 21, image: '', spec: '整份' },
       },
     })
     await expectError(invalidQuantity, 400, 'INVALID_QUANTITY')
@@ -116,7 +121,7 @@ test.describe('同桌协同 - 接口契约与幂等（REQ-001/002/003/005/006）
     const invalidPrice = await request.post(`${base(TABLE)}/cart/items`, {
       data: {
         memberId: member.memberId,
-        item: { uid: 'e2e-uid-bad-price', productId: 'p9', name: '手工宽粉', price: -1, quantity: 1, image: '', spec: '整份' },
+        item: { uid: uidOf('bad-price'), productId: 'p9', name: '手工宽粉', price: -1, quantity: 1, image: '', spec: '整份' },
       },
     })
     await expectError(invalidPrice, 400, 'INVALID_PRICE')
@@ -125,7 +130,7 @@ test.describe('同桌协同 - 接口契约与幂等（REQ-001/002/003/005/006）
   test('REQ-005.2: 非归属成员修改或删除他人条目被拒绝', async ({ request }) => {
     const { member: owner } = await joinMember(request, '契约成员A', 'e2e-contract-a')
     const { member: other } = await joinMember(request, '契约成员B', 'e2e-contract-b')
-    const uid = 'e2e-uid-idempotent-1'
+    const uid = ITEM_UID
 
     const patch = await request.patch(`${base(TABLE)}/cart/items/${uid}`, {
       data: { memberId: other.memberId, delta: 1 },
@@ -149,7 +154,7 @@ test.describe('同桌协同 - 接口契约与幂等（REQ-001/002/003/005/006）
   test('REQ-003.4/003.5: 本人确认被拒绝、他人重复确认幂等', async ({ request }) => {
     const { member: owner } = await joinMember(request, '契约成员A', 'e2e-contract-a')
     const { member: other } = await joinMember(request, '契约成员B', 'e2e-contract-b')
-    const uid = 'e2e-uid-idempotent-1'
+    const uid = ITEM_UID
 
     const selfAck = await request.post(`${base(TABLE)}/cart/items/${uid}/ack`, { data: { memberId: owner.memberId } })
     await expectError(selfAck, 400, 'SELF_ACK_NOT_ALLOWED')
@@ -173,13 +178,13 @@ test.describe('同桌协同 - 接口契约与幂等（REQ-001/002/003/005/006）
 
     const order = await request.post(`${base(TABLE)}/order`, {
       data: { memberId: member.memberId },
-      headers: { 'Idempotency-Key': 'e2e-idem-order-1' },
+      headers: { 'Idempotency-Key': uidOf('order') },
     })
     await expectOk(order)
     const ordered = ((await order.json()) as { session: SessionSnapshot }).session
-    expect(ordered.order.items.some((entry) => entry.uid === 'e2e-uid-idempotent-1')).toBe(true)
-    expect(ordered.cart.some((entry) => entry.uid === 'e2e-uid-idempotent-1')).toBe(false)
-    expect(ordered.order.items.filter((entry) => entry.uid === 'e2e-uid-idempotent-1')).toHaveLength(1)
+    expect(ordered.order.items.some((entry) => entry.uid === ITEM_UID)).toBe(true)
+    expect(ordered.cart.some((entry) => entry.uid === ITEM_UID)).toBe(false)
+    expect(ordered.order.items.filter((entry) => entry.uid === ITEM_UID)).toHaveLength(1)
 
     const emptyOrder = await request.post(`${base(TABLE)}/order`, { data: { memberId: member.memberId } })
     await expectError(emptyOrder, 400, 'EMPTY_CART')
