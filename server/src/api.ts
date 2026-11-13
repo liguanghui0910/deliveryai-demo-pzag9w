@@ -166,6 +166,17 @@ export function createApiRouter(store: SessionStore, hub: SseHub): Router {
     }),
   )
 
+  // 契约扩展（非技术 Spec API-001～API-012）：演示重置共享会话。
+  // 由前端「一键重置演示」按前端开发方案 A 调用（POST /api/v1/tables/{tableCode}/reset），
+  // 清空成员/购物车/订单，使演示可干净重跑；响应体沿用 { session } 形态。
+  router.post(
+    '/tables/:tableCode/reset',
+    guard((req, res) => {
+      const tableCode = parseTableCode(req.params.tableCode)
+      res.json({ session: store.resetSession(tableCode) })
+    }),
+  )
+
   // 未定义的 /api/v1 路径：统一 JSON 404（契约之外的补充错误码 NOT_FOUND）。
   router.use((_req, res) => {
     res.status(404).json(toErrorBody('NOT_FOUND', '接口不存在'))

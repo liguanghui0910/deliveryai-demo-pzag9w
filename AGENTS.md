@@ -74,7 +74,7 @@ playwright.config.ts       # E2E 配置
 - 新增 i18n 文案在 `src/i18n.ts` 的 zh/en 两处同步添加，按功能分组（`common.`、`menu.`、`cart.`、`order.`、`collab.`、`showcase.` 等）。
 - 新增 `localStorage`/`sessionStorage` 持久化一律 `try/catch` 包裹，不可用时降级内存态；现有 key：`i18nextLng`、`elderly-mode`（`true`/`false`）、`collab:nickname`、`collab:memberId`、`collab:table`（标签页级身份）。
 - 需要在 React 挂载前设置 html 属性/class 时，扩展 `index.html` 的内联脚本。
-- 服务端约定：错误响应统一为 `{ code, message, retryable }`；参数校验与错误码集中在 `server/src/validate.ts` + `server/src/types.ts`；服务端不重算价格、不校验售罄（客户端为可信来源，仅做结构与范围校验）；所有共享状态变更通过 `store` 的 `commit` 统一递增 `rev` 并广播快照；SSE/CORS 手写实现，不引入新依赖。
+- 服务端约定：演示重置端点为 `POST /api/v1/tables/{tableCode}/reset`（技术 Spec API-001～API-012 之外的追加式契约，清空该桌台共享会话并保持 `rev` 单调，重复调用为无操作）；错误响应统一为 `{ code, message, retryable }`；参数校验与错误码集中在 `server/src/validate.ts` + `server/src/types.ts`；服务端不重算价格、不校验售罄（客户端为可信来源，仅做结构与范围校验）；所有共享状态变更通过 `store` 的 `commit` 统一递增 `rev` 并广播快照；SSE/CORS 手写实现，不引入新依赖。
 - npm 源默认走 `https://registry.npmmirror.com`（见根目录与 `server/.npmrc`）。
 
 ## 验证命令

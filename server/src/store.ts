@@ -38,6 +38,8 @@ export interface SessionStore {
   ackCartItem(tableCode: string, memberId: string, uid: string): SessionSnapshot
   submitOrder(tableCode: string, memberId: string, idempotencyKey?: string): SessionSnapshot
   requestCancelOrderItem(tableCode: string, memberId: string, uid: string): SessionSnapshot
+  /** 演示重置：清空该桌台共享会话内容（成员/购物车/订单/幂等键），保持 rev 单调。 */
+  resetSession(tableCode: string): SessionSnapshot
   setOrderStage(tableCode: string, memberId: string, stage: OrderStage): SessionSnapshot
   payOrder(tableCode: string, memberId: string): SessionSnapshot
   subscribe(tableCode: string, listener: SessionListener): () => void
@@ -254,6 +256,26 @@ export function createSessionStore(): SessionStore {
           candidate.uid === uid ? { ...candidate, cancelState: 'requested' } : candidate,
         ),
       }
+      return commit(session)
+    },
+
+    resetSession(tableCode) {
+      const session = ensureSession(tableCode)
+      const clean =
+        session.members.length === 0 &&
+        session.cart.length === 0 &&
+        session.order.items.length === 0 &&
+        !session.order.paid &&
+        session.order.submittedAt === null &&
+        session.processedOrderKeys.length === 0
+      // 幂等：已是干净会话时不再变更（避免无意义的 rev 递增）。
+      if (clean) {
+        return toSnapshot(session)
+      }
+      session.members = []
+      session.cart = []
+      session.order = { items: [], stage: 'submitted', paid: false, submittedAt: null }
+      session.processedOrderKeys = []
       return commit(session)
     },
 

@@ -73,6 +73,7 @@ workflow run `completed/success` 且 Pages URL 返回 200，输出可访问链�
    curl -fsS -X POST "$VEFAAS_APP_URL/api/v1/tables/A08/members"      -H 'Content-Type: application/json'      -d '{"nickname":"验收","clientMemberId":"verify-1"}'
    ```
 6. 记录实测值：多端同步时效、SSE 是否被网关限制而实际走轮询（依赖项 DEP-002），回填到交付过程展示页配置（DEP-003）。
+7. 可选：复跑演示前调用 `POST /api/v1/tables/{tableCode}/reset` 清空该桌台共享会话（成员/购物车/订单），确保演示可干净重跑。
 
 ## 回滚
 

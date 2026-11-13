@@ -87,6 +87,8 @@ npm --prefix server start
 
 `/api/v1` 接口清单与错误码定义见工作区共享产物中的技术 Spec（API-001～API-012）；服务端实现位于 `server/src/`，统一错误响应为 `{ code, message, retryable }`。
 
+除技术 Spec 的 API-001～API-012 外，服务端另提供一个**新增（追加式）**端点：`POST /api/v1/tables/{tableCode}/reset`，用于「一键重置演示」时清空该桌台的共享会话（成员、购物车、订单与幂等键），使演示可干净重跑；`rev` 保持单调递增，重复调用为无操作。
+
 ## 生产部署（veFaaS 单服务同源）
 
 前端产物与 `/api/v1` 由同一个 Express 服务提供，规避跨域：
