@@ -194,7 +194,7 @@ export default function App() {
         onStage={collab.setStage}
         onSoldOut={(productId) => dispatch({ type: 'TOGGLE_SOLD_OUT', productId })}
         onRespond={() => dispatch({ type: 'RESPOND_SERVICES' })}
-        onReset={() => { dispatch({ type: 'RESET' }); setConsoleOpen(false) }}
+        onReset={() => { dispatch({ type: 'RESET' }); collab.resetShared(); setConsoleOpen(false) }}
       />
 
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>

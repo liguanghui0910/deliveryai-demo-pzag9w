@@ -122,6 +122,12 @@ export const collabApi = {
       method: 'PATCH',
       body: { memberId, stage },
     }),
+  /**
+   * 演示会话重置：清空该桌台的共享购物车与订单，便于演示干净重跑。
+   * 后端暂未提供该端点时请求失败，调用方静默忽略并保持既有本地重置行为。
+   */
+  resetSession: (tableCode: string) =>
+    request<{ session?: SessionSnapshot }>(`/api/v1/tables/${encodeURIComponent(tableCode)}/reset`, { method: 'POST' }),
   pay: (tableCode: string, memberId: string) =>
     request<{ session: SessionSnapshot }>(`/api/v1/tables/${encodeURIComponent(tableCode)}/order/pay`, {
       method: 'POST',

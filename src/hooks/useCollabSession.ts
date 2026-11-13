@@ -93,6 +93,8 @@ export interface CollabSessionController {
   setStage: (stage: OrderStage) => void
   pay: () => void
   refresh: () => void
+  /** 一键重置演示：清空同桌共享会话后重新加入并收敛（协同不可用时保持既有本地重置）。 */
+  resetShared: () => void
 }
 
 interface UseCollabSessionOptions {
@@ -333,6 +335,23 @@ export function useCollabSession({ dispatch, state, nickname }: UseCollabSession
   }, [available, selfMemberId, dispatch, table, applySnapshot, reportFailure])
 
   // 手动刷新兜底（REQ-004.2）：已建立连接时拉取快照；尚未加入/已中断时重新加入并收敛。
+  const resetShared = useCallback(() => {
+    const { table: currentTable, view: currentView } = stateRef.current
+    if (!available || !currentTable) return
+    void collabApi.resetSession(currentTable)
+      .then(() => {
+        // 一键重置会回到首页；下一次进入同桌时重新加入并拉取干净快照
+        if (currentView === 'home') return
+        joinedTableRef.current = null
+        inflightRef.current = null
+        setSelf(null)
+        setSyncState('reconnecting')
+      })
+      .catch(() => {
+        // 重置接口暂不可用（如后端尚未提供）时静默降级，保留既有本地重置体验
+      })
+  }, [available])
+
   const refresh = useCallback(() => {
     if (self?.memberId && streamRef.current) {
       streamRef.current.refresh()
@@ -358,5 +377,6 @@ export function useCollabSession({ dispatch, state, nickname }: UseCollabSession
     setStage,
     pay,
     refresh,
+    resetShared,
   }
 }
