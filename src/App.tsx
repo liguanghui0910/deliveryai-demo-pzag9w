@@ -39,9 +39,13 @@ function createInitialState(): AppState {
     }
   }
 
-  // 深链接：直接以 #/welcome 等地址打开时，先绑定示例桌台再进入对应视图；
-  // home 与 showcase（交付过程展示页）无需桌台上下文。
-  if (requestedView && requestedView !== 'home' && requestedView !== 'showcase') {
+  // 交付过程展示页为独立顶层视图，深链接直达时无需桌台上下文（REQ-007.1）
+  if (requestedView === 'showcase') {
+    return { ...initialState, view: requestedView }
+  }
+
+  // 深链接：直接以 #/welcome、#/menu 等地址打开时，先绑定示例桌台再进入对应视图
+  if (requestedView && requestedView !== 'home') {
     return { ...initialState, table: 'A08', view: requestedView }
   }
 
@@ -131,6 +135,7 @@ export default function App() {
         language={i18n.language}
         elderly={elderly}
         syncState={collab.syncState}
+        selfName={collab.selfNickname ?? nickname}
         onToggleLanguage={toggleLanguage}
         onToggleElderly={handleToggleElderly}
         onView={changeView}

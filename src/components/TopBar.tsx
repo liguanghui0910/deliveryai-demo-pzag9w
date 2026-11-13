@@ -12,6 +12,8 @@ interface TopBarProps {
   language: string
   elderly: boolean
   syncState: SyncState
+  /** 本端成员昵称；用于在顶栏标识当前同桌身份。 */
+  selfName?: string
   onToggleLanguage: () => void
   onToggleElderly: () => void
   onView: (view: ViewName) => void
@@ -27,7 +29,7 @@ const syncDot: Record<SyncState, string> = {
   offline: 'bg-chili-500',
 }
 
-export function TopBar({ table, view, serviceCount, language, elderly, syncState, onToggleLanguage, onToggleElderly, onView, onService, onConsole, onRefreshSync, onShowcase }: TopBarProps) {
+export function TopBar({ table, view, serviceCount, language, elderly, syncState, selfName, onToggleLanguage, onToggleElderly, onView, onService, onConsole, onRefreshSync, onShowcase }: TopBarProps) {
   const { t } = useTranslation()
   const areaKey = tableAreas[table]
   const tableLabel = areaKey ? `${table} · ${t(areaKey)}` : table
@@ -43,11 +45,15 @@ export function TopBar({ table, view, serviceCount, language, elderly, syncState
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-chili-500 text-lg font-black text-white shadow-md">{t('common.brand')}</span>
             <span className="hidden sm:block"><strong className="block leading-4 text-charcoal-900">{t('common.brand_name')}</strong><small className="text-charcoal-500">{t('common.subtitle')}</small></span>
           </button>
-          <span className="ml-1 flex items-center gap-1 rounded-full bg-rice-200 px-3 py-2 text-xs font-bold text-charcoal-700"><MapPin size={13} className="text-chili-500" />{tableLabel}</span>
+          <span className="ml-1 flex items-center gap-1 rounded-full bg-rice-200 px-3 py-2 text-xs font-bold text-charcoal-700">
+            <MapPin size={13} className="text-chili-500" />{tableLabel}
+            {selfName ? <span className="text-chili-600">· {selfName}</span> : null}
+          </span>
           {/* 协同同步状态；点击可手动刷新兜底（REQ-004.2 / REQ-008.5） */}
           <button
             type="button"
             onClick={onRefreshSync}
+            aria-label={t('collab.sync_retry')}
             title={t('collab.sync_retry')}
             className={`hidden items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold lg:flex ${syncState === 'offline' ? 'bg-amber-100 text-amber-500' : 'bg-rice-200 text-charcoal-700'}`}
           >

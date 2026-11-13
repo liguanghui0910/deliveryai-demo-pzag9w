@@ -1,5 +1,5 @@
 import type { SessionSnapshot, SyncState } from '@/types'
-import { collabApi, collabStreamUrl, CollabError } from '@/api/collabClient'
+import { collabApi, collabStreamUrl, CollabError } from '@/collab/collabClient'
 
 export interface CollabStreamOptions {
   tableCode: string

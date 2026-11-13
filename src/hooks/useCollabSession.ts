@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import i18next from 'i18next'
-import { CollabError, collabApi } from '@/api/collabClient'
-import { createCollabStream, type CollabStream } from '@/api/collabStream'
+import { CollabError, collabApi } from '@/collab/collabClient'
+import { createCollabStream, type CollabStream } from '@/collab/collabStream'
 import { uid } from '@/lib/utils'
 import type {
   AppAction,
@@ -144,31 +144,35 @@ export function useCollabSession({ dispatch, state, nickname }: UseCollabSession
     streamRef.current?.refresh()
   }, [dispatch])
 
-  // 加入同桌：进入点餐流程且已选定昵称后执行；clientMemberId 保证幂等（REQ-001.2 / REQ-001.4）。
-  // 以 table 为在途标记，避免视图切换或 StrictMode 双调用造成的重复加入与状态卡死。
+  // 加入同桌（REQ-001.2 / REQ-001.4）：clientMemberId 保证幂等，失败时置为不可用并允许重试。
+  const joinSession = useCallback(async (tableCode: string, name: string) => {
+    if (inflightRef.current === tableCode) return
+    inflightRef.current = tableCode
+    setSyncState('reconnecting')
+    try {
+      const result = await collabApi.join(tableCode, name, ensureClientMemberId())
+      joinedTableRef.current = tableCode
+      writeSessionItem(KEY_MEMBER_ID, result.member.memberId)
+      writeSessionItem(KEY_TABLE, tableCode)
+      setSelf(result.member)
+      applySnapshot(result.session)
+      setSyncState('connected')
+    } catch (error) {
+      joinedTableRef.current = null
+      setSyncState('offline')
+      if ((error as CollabError)?.kind === 'validation') reportFailure(error)
+    } finally {
+      if (inflightRef.current === tableCode) inflightRef.current = null
+    }
+  }, [applySnapshot, reportFailure])
+
+  // 进入点餐流程且已选定昵称后自动加入；以 table 为在途/已完成标记，
+  // 避免视图切换或 StrictMode 双调用造成的重复加入与状态卡死。
   useEffect(() => {
     if (!entered || !table || !nickname) return
     if (joinedTableRef.current === table || inflightRef.current === table) return
-    inflightRef.current = table
-    setSyncState('reconnecting')
-    ;(async () => {
-      try {
-        const result = await collabApi.join(table, nickname, ensureClientMemberId())
-        joinedTableRef.current = table
-        writeSessionItem(KEY_MEMBER_ID, result.member.memberId)
-        writeSessionItem(KEY_TABLE, table)
-        setSelf(result.member)
-        applySnapshot(result.session)
-        setSyncState('connected')
-      } catch (error) {
-        joinedTableRef.current = table
-        setSyncState('offline')
-        if ((error as CollabError)?.kind === 'validation') reportFailure(error)
-      } finally {
-        if (inflightRef.current === table) inflightRef.current = null
-      }
-    })()
-  }, [entered, table, nickname, applySnapshot, reportFailure])
+    void joinSession(table, nickname)
+  }, [entered, table, nickname, joinSession])
 
   // 建立同步：SSE 全量快照推送 + 断线重连 + 轮询兜底（REQ-004）。
   useEffect(() => {
@@ -209,13 +213,15 @@ export function useCollabSession({ dispatch, state, nickname }: UseCollabSession
       dispatch({ type: 'ADD_CART', item })
       return
     }
-    // 「谁点了」可能选中同桌其他成员：按其昵称解析 memberId 归属，解析不到时归属本人
-    const picked = membersRef.current.find((member) => member.nickname === item.orderedBy)
+    // 「谁点了」归属：昵称与本人一致（默认选中本人昵称）时归属本人，否则按同桌成员昵称解析
+    // （重复昵称并存时按昵称无法区分，取首个匹配；不覆盖他人身份，见 REQ-001.6）
+    const picked = item.orderedBy === selfNickname ? null : membersRef.current.find((member) => member.nickname === item.orderedBy)
     const memberId = picked?.memberId ?? selfMemberId
     const orderedBy = picked?.nickname ?? selfNickname ?? item.orderedBy
     const effective: CartItem = { ...item, orderedBy, orderedByMemberId: memberId, ack: null }
+    // 仅与「归属同一成员」的既有条目合并数量：他人条目不可改（服务端 NOT_ITEM_OWNER），按新条目写入
     const existing = stateRef.current.cart.find((entry) =>
-      entry.orderedByMemberId && entry.productId === effective.productId && entry.spec === effective.spec && entry.orderedBy === effective.orderedBy)
+      entry.orderedByMemberId === memberId && entry.productId === effective.productId && entry.spec === effective.spec && entry.orderedBy === effective.orderedBy)
     dispatch(existing
       ? { type: 'CHANGE_QTY', uid: existing.uid, delta: 1 }
       : { type: 'ADD_CART', item: effective })
@@ -326,9 +332,18 @@ export function useCollabSession({ dispatch, state, nickname }: UseCollabSession
       })
   }, [available, selfMemberId, dispatch, table, applySnapshot, reportFailure])
 
+  // 手动刷新兜底（REQ-004.2）：已建立连接时拉取快照；尚未加入/已中断时重新加入并收敛。
   const refresh = useCallback(() => {
-    streamRef.current?.refresh()
-  }, [])
+    if (self?.memberId && streamRef.current) {
+      streamRef.current.refresh()
+      return
+    }
+    const { table: currentTable } = stateRef.current
+    if (!currentTable || !nickname) return
+    joinedTableRef.current = null
+    inflightRef.current = null
+    void joinSession(currentTable, nickname)
+  }, [self?.memberId, nickname, joinSession])
 
   return {
     syncState,
